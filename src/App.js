@@ -10,7 +10,7 @@ const initialFacts = [
     source: "https://opensource.fb.com/",
     category: "technology",
     votesInteresting: 24,
-    votesMindblowing: 9,
+    votesMindbBlowing: 9,
     votesFalse: 4,
     createdIn: 2021,
   },
@@ -21,7 +21,7 @@ const initialFacts = [
       "https://www.mother.ly/parenting/millennial-dads-spend-more-time-with-their-kids",
     category: "society",
     votesInteresting: 11,
-    votesMindblowing: 2,
+    votesMindBlowing: 2,
     votesFalse: 0,
     createdIn: 2019,
   },
@@ -31,7 +31,7 @@ const initialFacts = [
     source: "https://en.wikipedia.org/wiki/Lisbon",
     category: "society",
     votesInteresting: 8,
-    votesMindblowing: 3,
+    votesMindBlowing: 3,
     votesFalse: 1,
     createdIn: 2015,
   },
@@ -77,7 +77,11 @@ function App() {
 
       <main className="main">
         <CategoryFilter setCurrentCategory={setCurrentCategory} />
-        {isLoading ? <Loader /> : <FactList facts={facts} />}
+        {isLoading ? (
+          <Loader />
+        ) : (
+          <FactList facts={facts} setFacts={setFacts} />
+        )}
       </main>
     </>
   );
@@ -167,7 +171,9 @@ function NewFactForm({ setFacts, setShowForm }) {
       setIsUploading(false);
 
       // 4. Add new fact to the UI: add the fact to state
-      setFacts((facts) => [newFact[0], ...facts]);
+      if (!error) {
+        setFacts((facts) => [newFact[0], ...facts]);
+      }
       // 5. Reset input fields
       setText("");
       setSource("");
@@ -241,7 +247,7 @@ function CategoryFilter({ setCurrentCategory }) {
   );
 }
 
-function FactList({ facts }) {
+function FactList({ facts, setFacts }) {
   if (facts.length === 0) {
     return (
       <p className="essage">
@@ -254,7 +260,7 @@ function FactList({ facts }) {
     <section>
       <ul className="facts-list">
         {facts.map((fact) => (
-          <Fact key={fact.id} fact={fact} />
+          <Fact key={fact.id} fact={fact} setFacts={setFacts} />
         ))}
       </ul>
       <p>There are {facts.length} facts in the database. Add your own!</p>
@@ -262,7 +268,25 @@ function FactList({ facts }) {
   );
 }
 
-function Fact({ fact }) {
+function Fact({ fact, setFacts }) {
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  async function handleVote(columnName) {
+    setIsUpdating(true);
+    const { data: updatedFact, error } = await supabase
+      .from("facts")
+      .update({ [columnName]: fact[columnName] + 1 })
+      .eq("id", fact.id)
+      .select();
+    setIsUpdating(false);
+    console.log(updatedFact);
+    if (!error) {
+      setFacts((facts) =>
+        facts.map((f) => (f.id === fact.id ? updatedFact[0] : f))
+      );
+    }
+  }
+
   return (
     <li className="fact">
       <p>
@@ -286,9 +310,18 @@ function Fact({ fact }) {
         {fact.category}
       </span>
       <div className="vote-buttons">
-        <button>👍 {fact.votesInteresting}</button>
-        <button>🤯 {fact.votesMindblowing}</button>
-        <button>⛔️ {fact.votesFalse}</button>
+        <button
+          onClick={() => handleVote("votesInteresting")}
+          disabled={isUpdating}
+        >
+          👍 {fact.votesInteresting}
+        </button>
+        <button onClick={() => handleVote("votesMindBlowing")}>
+          🤯 {fact.votesMindBlowing}
+        </button>
+        <button onClick={() => handleVote("votesFalse")}>
+          ⛔️ {fact.votesFalse}
+        </button>
       </div>
     </li>
   );
